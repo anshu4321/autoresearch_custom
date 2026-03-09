@@ -55,6 +55,14 @@ uv run prepare_retrieval.py
 uv run train_retrieval.py
 ```
 
+Live tracking dashboard:
+
+```bash
+python3 dashboard/server.py --repo-root . --port 8787
+```
+
+Open `http://127.0.0.1:8787` to monitor run history + live progress from `run_retrieval.log`.
+
 ## Running the agent
 
 Simply spin up your Claude/Codex or whatever you want in this repo (and disable all permissions), then you can prompt something like:

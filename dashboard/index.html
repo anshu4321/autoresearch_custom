@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Autoresearch Mission Deck</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Syne:wght@500;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  </head>
+  <body>
+    <div class="bg-orb orb-a"></div>
+    <div class="bg-orb orb-b"></div>
+    <div class="bg-grid"></div>
+
+    <main class="layout">
+      <header class="hero panel rise">
+        <div>
+          <p class="eyebrow">Autonomous Retrieval Research</p>
+          <h1>Mission Control Deck</h1>
+          <p class="tagline">Track each iteration live while the agent explores the search space.</p>
+        </div>
+        <div class="hero-meta">
+          <div id="livePill" class="pill idle">Idle</div>
+          <p id="lastUpdated" class="mono tiny">Last update: --</p>
+          <p id="gitInfo" class="mono tiny">Branch: -- | Head: --</p>
+        </div>
+      </header>
+
+      <section class="kpis">
+        <article class="panel card rise">
+          <p class="label">Best nDCG@10</p>
+          <p id="bestNdcg" class="value">--</p>
+          <p id="bestCommit" class="meta mono">commit --</p>
+        </article>
+        <article class="panel card rise delay-1">
+          <p class="label">Latest nDCG@10</p>
+          <p id="latestNdcg" class="value">--</p>
+          <p id="latestDelta" class="meta mono">delta --</p>
+        </article>
+        <article class="panel card rise delay-2">
+          <p class="label">Runs Completed</p>
+          <p id="totalRuns" class="value">0</p>
+          <p id="keepRatio" class="meta mono">keep ratio --</p>
+        </article>
+        <article class="panel card rise delay-3">
+          <p class="label">Projected 7h Runs</p>
+          <p id="projectedRuns" class="value">--</p>
+          <p id="cycleTime" class="meta mono">cycle --</p>
+        </article>
+      </section>
+
+      <section class="split">
+        <article class="panel chart-panel rise">
+          <div class="panel-head">
+            <h2>Performance Curve</h2>
+            <p class="mono tiny">nDCG@10 by experiment index</p>
+          </div>
+          <canvas id="perfChart"></canvas>
+        </article>
+
+        <article class="panel live-panel rise delay-1">
+          <div class="panel-head">
+            <h2>Live Run Feed</h2>
+            <p class="mono tiny">Current log heartbeat</p>
+          </div>
+          <div class="live-grid">
+            <div class="live-item">
+              <p class="live-label">Step</p>
+              <p id="liveStep" class="live-value">--</p>
+            </div>
+            <div class="live-item">
+              <p class="live-label">Progress</p>
+              <p id="liveProgress" class="live-value">--</p>
+            </div>
+            <div class="live-item">
+              <p class="live-label">Loss</p>
+              <p id="liveLoss" class="live-value">--</p>
+            </div>
+            <div class="live-item">
+              <p class="live-label">Remaining</p>
+              <p id="liveRemaining" class="live-value">--</p>
+            </div>
+            <div class="live-item">
+              <p class="live-label">Peak VRAM</p>
+              <p id="liveVram" class="live-value">--</p>
+            </div>
+            <div class="live-item">
+              <p class="live-label">Training Time</p>
+              <p id="liveTrainSec" class="live-value">--</p>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="panel table-panel rise delay-2">
+        <div class="panel-head">
+          <h2>Experiment Ledger</h2>
+          <p class="mono tiny">Keep/discard decisions with memory and hypothesis notes</p>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Commit</th>
+                <th>nDCG@10</th>
+                <th>Memory (GB)</th>
+                <th>Status</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody id="runsBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
