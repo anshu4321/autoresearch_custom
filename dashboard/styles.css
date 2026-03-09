@@ -20,6 +20,7 @@ html,
 body {
   margin: 0;
   min-height: 100%;
+  height: 100%;
   font-family: "Space Grotesk", sans-serif;
   color: var(--text);
   background: var(--bg);
@@ -71,6 +72,8 @@ body {
   margin: 24px auto 42px;
   position: relative;
   z-index: 2;
+  display: grid;
+  gap: 16px;
 }
 
 .panel {
@@ -185,7 +188,6 @@ h2 {
 }
 
 .kpis {
-  margin-top: 16px;
   display: grid;
   gap: 14px;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -215,16 +217,17 @@ h2 {
 }
 
 .split {
-  margin-top: 16px;
   display: grid;
   gap: 14px;
   grid-template-columns: 1.5fr 1fr;
+  align-items: start;
 }
 
 .chart-panel,
 .live-panel,
 .table-panel {
   padding: 16px;
+  min-height: 0;
 }
 
 .panel-head {
@@ -235,15 +238,38 @@ h2 {
   margin-bottom: 14px;
 }
 
-#perfChart {
+.chart-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-wrap {
+  position: relative;
   width: 100%;
   height: 320px;
+  min-height: 320px;
+  max-height: 320px;
+  overflow: hidden;
+}
+
+#perfChart {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.live-panel {
+  display: flex;
+  flex-direction: column;
 }
 
 .live-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+  max-height: 320px;
+  overflow: auto;
+  padding-right: 2px;
 }
 
 .live-item {
@@ -265,13 +291,9 @@ h2 {
   font-weight: 700;
 }
 
-.table-panel {
-  margin-top: 16px;
-}
-
 .table-wrap {
   overflow: auto;
-  max-height: 420px;
+  max-height: min(420px, 50vh);
   border-radius: 12px;
   border: 1px solid rgba(122, 196, 225, 0.16);
 }
@@ -279,6 +301,7 @@ h2 {
 table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
 thead th {
@@ -305,9 +328,8 @@ tbody tr:hover {
 }
 
 td:last-child {
-  max-width: 420px;
-  text-overflow: ellipsis;
-  overflow: hidden;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .badge {

@@ -1,5 +1,16 @@
 const REFRESH_MS = 5000;
 let perfChart = null;
+let lastSeriesKey = "";
+let lastRunsKey = "";
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
 function fmtNum(v, digits = 3) {
   if (typeof v !== "number" || Number.isNaN(v)) return "--";
@@ -76,6 +87,7 @@ function initOrUpdateChart(snapshot) {
   const labels = snapshot.series?.labels || [];
   const ndcg = snapshot.series?.ndcg || [];
   const best = snapshot.series?.best_so_far || [];
+  const seriesKey = JSON.stringify({ labels, ndcg, best });
 
   const ctx = document.getElementById("perfChart").getContext("2d");
   if (!perfChart) {
@@ -114,7 +126,7 @@ function initOrUpdateChart(snapshot) {
       options: {
         maintainAspectRatio: false,
         responsive: true,
-        animation: { duration: 350 },
+        animation: false,
         plugins: {
           legend: {
             labels: {
@@ -145,18 +157,29 @@ function initOrUpdateChart(snapshot) {
         },
       },
     });
+    lastSeriesKey = seriesKey;
     return;
   }
 
+  if (seriesKey === lastSeriesKey) {
+    return;
+  }
+  lastSeriesKey = seriesKey;
   perfChart.data.labels = labels;
   perfChart.data.datasets[0].data = ndcg;
   perfChart.data.datasets[1].data = best;
-  perfChart.update();
+  perfChart.update("none");
 }
 
 function renderRunsTable(snapshot) {
   const body = document.getElementById("runsBody");
   const runs = [...(snapshot.runs || [])].reverse();
+  const runsKey = JSON.stringify(runs);
+
+  if (runsKey === lastRunsKey) {
+    return;
+  }
+  lastRunsKey = runsKey;
 
   if (!runs.length) {
     body.innerHTML =
@@ -166,15 +189,19 @@ function renderRunsTable(snapshot) {
 
   const rows = runs
     .map((run) => {
-      const statusClass = run.status || "unknown";
+      const statusClass = escapeHtml(run.status || "unknown");
+      const index = escapeHtml(run.index ?? "--");
+      const commit = escapeHtml(run.commit || "--");
+      const desc = run.description || "--";
+      const safeDesc = escapeHtml(desc);
       return `
         <tr>
-          <td class="mono">${run.index}</td>
-          <td class="mono">${run.commit || "--"}</td>
+          <td class="mono">${index}</td>
+          <td class="mono">${commit}</td>
           <td class="mono">${fmtNum(run.val_ndcg_at_10, 6)}</td>
           <td class="mono">${fmtNum(run.memory_gb, 1)}</td>
           <td><span class="badge ${statusClass}">${statusClass}</span></td>
-          <td title="${(run.description || "").replace(/"/g, "&quot;")}">${run.description || "--"}</td>
+          <td title="${safeDesc}">${safeDesc}</td>
         </tr>
       `;
     })

@@ -10,7 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Syne:wght@500;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/styles.css?v=20260309b" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   </head>
   <body>
@@ -61,7 +61,9 @@
             <h2>Performance Curve</h2>
             <p class="mono tiny">nDCG@10 by experiment index</p>
           </div>
-          <canvas id="perfChart"></canvas>
+          <div class="chart-wrap">
+            <canvas id="perfChart"></canvas>
+          </div>
         </article>
 
         <article class="panel live-panel rise delay-1">
@@ -121,6 +123,6 @@
       </section>
     </main>
 
-    <script src="/app.js"></script>
+    <script src="/app.js?v=20260309b"></script>
   </body>
 </html>
