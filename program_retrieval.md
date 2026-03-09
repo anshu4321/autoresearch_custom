@@ -77,3 +77,12 @@ commit	val_ndcg_at_10	memory_gb	status	description
 9. If not, reset to prior best commit.
 
 Timeout rule: if runtime exceeds 10 minutes, treat as failed and discard.
+
+## Autonomy policy
+
+After setup and baseline are complete, continue the experiment loop autonomously.
+Do not ask the human for approval after each run. Only interrupt if:
+
+- the human explicitly asks to stop or change direction
+- repeated crashes block progress
+- credentials, storage, or compute access is missing
