@@ -184,27 +184,30 @@ def main() -> None:
         desc = f"{key} {old_val} -> {new_val}"
 
         print(f"[run {run_idx:03d}] start | base={head_before} | {desc}")
-        subprocess.run(
-            ["timeout", "900", "uv", "run", "train_retrieval.py"],
-            cwd=str(repo),
-            stdout=run_log_path.open("w", encoding="utf-8"),
-            stderr=subprocess.STDOUT,
-            text=True,
-            check=False,
-        )
+        with run_log_path.open("w", encoding="utf-8") as log_f:
+            proc = subprocess.run(
+                ["timeout", "900", "uv", "run", "train_retrieval.py"],
+                cwd=str(repo),
+                stdout=log_f,
+                stderr=subprocess.STDOUT,
+                text=True,
+                check=False,
+            )
 
         ndcg, peak_vram = parse_metrics(run_log_path)
         if ndcg is None:
             train_path.write_text(current_text, encoding="utf-8")
+            fail_hint = "timeout" if proc.returncode == 124 else f"exit={proc.returncode}"
             outcome = RunOutcome(
                 status="crash",
                 val_ndcg=0.0,
                 peak_vram_mb=0.0,
-                description=desc,
+                description=f"{desc} ({fail_hint})",
                 commit=f"wip{run_idx:04d}",
             )
             append_result(results_path, outcome)
-            print(f"[run {run_idx:03d}] crash | {desc}")
+            print(f"[run {run_idx:03d}] crash | {desc} | {fail_hint}")
+            time.sleep(1.0)
             continue
 
         if peak_vram is None:
