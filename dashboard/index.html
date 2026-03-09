@@ -10,7 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Syne:wght@500;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/styles.css?v=20260309b" />
+    <link rel="stylesheet" href="/styles.css?v=20260309c" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   </head>
   <body>
@@ -29,6 +29,7 @@
           <div id="livePill" class="pill idle">Idle</div>
           <p id="lastUpdated" class="mono tiny">Last update: --</p>
           <p id="gitInfo" class="mono tiny">Branch: -- | Head: --</p>
+          <p id="streamInfo" class="mono tiny">Stream: connecting...</p>
         </div>
       </header>
 
@@ -70,6 +71,15 @@
           <div class="panel-head">
             <h2>Live Run Feed</h2>
             <p class="mono tiny">Current log heartbeat</p>
+          </div>
+          <div class="progress-wrap">
+            <div class="progress-meta">
+              <span class="mono tiny">Live step progress</span>
+              <span id="liveProgressBarLabel" class="mono tiny">0.0%</span>
+            </div>
+            <div class="progress-track">
+              <div id="liveProgressFill" class="progress-fill"></div>
+            </div>
           </div>
           <div class="live-grid">
             <div class="live-item">
@@ -123,6 +133,6 @@
       </section>
     </main>
 
-    <script src="/app.js?v=20260309b"></script>
+    <script src="/app.js?v=20260309c"></script>
   </body>
 </html>

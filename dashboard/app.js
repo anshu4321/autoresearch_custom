@@ -1,14 +1,24 @@
-const REFRESH_MS = 5000;
+const STREAM_URL = "/api/stream";
+const FALLBACK_POLL_MS = 3000;
+
 let perfChart = null;
 let lastSeriesKey = "";
 let lastRunsKey = "";
+
+let stream = null;
+let fallbackTimer = null;
+let reconnectTimer = null;
+
+let livePctCurrent = 0;
+let livePctTarget = 0;
+let livePctRAF = null;
 
 function escapeHtml(value) {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
+    .replace(/\"/g, "&quot;")
     .replace(/'/g, "&#39;");
 }
 
@@ -28,6 +38,47 @@ function fmtDuration(seconds) {
   const m = Math.floor(seconds / 60);
   const s = Math.round(seconds % 60);
   return `${m}m ${s}s`;
+}
+
+function clampPct(v) {
+  if (typeof v !== "number" || Number.isNaN(v)) return 0;
+  return Math.max(0, Math.min(100, v));
+}
+
+function setStreamInfo(label) {
+  const el = document.getElementById("streamInfo");
+  if (!el) return;
+  el.textContent = `Stream: ${label}`;
+}
+
+function animateLiveProgress() {
+  const fill = document.getElementById("liveProgressFill");
+  const label = document.getElementById("liveProgressBarLabel");
+  if (!fill || !label) {
+    livePctRAF = null;
+    return;
+  }
+
+  const delta = livePctTarget - livePctCurrent;
+  if (Math.abs(delta) <= 0.05) {
+    livePctCurrent = livePctTarget;
+    fill.style.width = `${livePctCurrent.toFixed(2)}%`;
+    label.textContent = `${livePctCurrent.toFixed(1)}%`;
+    livePctRAF = null;
+    return;
+  }
+
+  livePctCurrent += delta * 0.24;
+  fill.style.width = `${livePctCurrent.toFixed(2)}%`;
+  label.textContent = `${livePctCurrent.toFixed(1)}%`;
+  livePctRAF = window.requestAnimationFrame(animateLiveProgress);
+}
+
+function setLiveProgressTarget(nextPct) {
+  livePctTarget = clampPct(nextPct);
+  if (!livePctRAF) {
+    livePctRAF = window.requestAnimationFrame(animateLiveProgress);
+  }
 }
 
 function applyLivePill(state) {
@@ -81,6 +132,8 @@ function renderLive(snapshot) {
     summary.peak_vram_mb != null ? `${fmtNum(summary.peak_vram_mb / 1024, 2)} GB` : "--";
   document.getElementById("liveTrainSec").textContent =
     summary.training_seconds != null ? `${fmtNum(summary.training_seconds, 1)}s` : "--";
+
+  setLiveProgressTarget(progress.pct ?? 0);
 }
 
 function initOrUpdateChart(snapshot) {
@@ -161,9 +214,8 @@ function initOrUpdateChart(snapshot) {
     return;
   }
 
-  if (seriesKey === lastSeriesKey) {
-    return;
-  }
+  if (seriesKey === lastSeriesKey) return;
+
   lastSeriesKey = seriesKey;
   perfChart.data.labels = labels;
   perfChart.data.datasets[0].data = ndcg;
@@ -176,11 +228,9 @@ function renderRunsTable(snapshot) {
   const runs = [...(snapshot.runs || [])].reverse();
   const runsKey = JSON.stringify(runs);
 
-  if (runsKey === lastRunsKey) {
-    return;
-  }
-  lastRunsKey = runsKey;
+  if (runsKey === lastRunsKey) return;
 
+  lastRunsKey = runsKey;
   if (!runs.length) {
     body.innerHTML =
       '<tr><td colspan="6" class="mono" style="color:#9eb7c9">No runs yet. Start the experiment loop.</td></tr>';
@@ -210,18 +260,30 @@ function renderRunsTable(snapshot) {
   body.innerHTML = rows;
 }
 
-async function refresh() {
-  try {
-    const res = await fetch(`/api/snapshot?ts=${Date.now()}`, { cache: "no-store" });
-    if (!res.ok) {
-      throw new Error(`snapshot request failed: ${res.status}`);
-    }
-    const snapshot = await res.json();
+function applySnapshot(snapshot) {
+  renderKPIs(snapshot);
+  renderLive(snapshot);
+  initOrUpdateChart(snapshot);
+  renderRunsTable(snapshot);
+}
 
-    renderKPIs(snapshot);
-    renderLive(snapshot);
-    initOrUpdateChart(snapshot);
-    renderRunsTable(snapshot);
+function applyLivePayload(payload) {
+  document.getElementById("lastUpdated").textContent = `Last update: ${payload.generated_at || "--"}`;
+  renderLive(payload);
+}
+
+async function fetchSnapshot() {
+  const res = await fetch(`/api/snapshot?ts=${Date.now()}`, { cache: "no-store" });
+  if (!res.ok) {
+    throw new Error(`snapshot request failed: ${res.status}`);
+  }
+  return res.json();
+}
+
+async function refreshViaHttp() {
+  try {
+    const snapshot = await fetchSnapshot();
+    applySnapshot(snapshot);
   } catch (err) {
     console.error(err);
     applyLivePill("stalled");
@@ -229,5 +291,81 @@ async function refresh() {
   }
 }
 
-refresh();
-setInterval(refresh, REFRESH_MS);
+function startFallbackPolling() {
+  if (fallbackTimer) return;
+  setStreamInfo("HTTP polling");
+  void refreshViaHttp();
+  fallbackTimer = window.setInterval(refreshViaHttp, FALLBACK_POLL_MS);
+}
+
+function stopFallbackPolling() {
+  if (!fallbackTimer) return;
+  window.clearInterval(fallbackTimer);
+  fallbackTimer = null;
+}
+
+function scheduleReconnect(delayMs = 2000) {
+  if (reconnectTimer) return;
+  reconnectTimer = window.setTimeout(() => {
+    reconnectTimer = null;
+    connectStream();
+  }, delayMs);
+}
+
+function connectStream() {
+  if (!("EventSource" in window)) {
+    startFallbackPolling();
+    return;
+  }
+
+  if (stream) {
+    stream.close();
+    stream = null;
+  }
+
+  setStreamInfo("connecting...");
+  stream = new EventSource(`${STREAM_URL}?ts=${Date.now()}`);
+
+  stream.onopen = () => {
+    setStreamInfo("LIVE");
+  };
+
+  stream.addEventListener("snapshot", (event) => {
+    try {
+      const snapshot = JSON.parse(event.data);
+      applySnapshot(snapshot);
+      setStreamInfo("LIVE");
+      stopFallbackPolling();
+    } catch (err) {
+      console.error("bad stream payload", err);
+    }
+  });
+
+  stream.addEventListener("live", (event) => {
+    try {
+      const payload = JSON.parse(event.data);
+      applyLivePayload(payload);
+      setStreamInfo("LIVE");
+      stopFallbackPolling();
+    } catch (err) {
+      console.error("bad live payload", err);
+    }
+  });
+
+  stream.onerror = () => {
+    if (stream) {
+      stream.close();
+      stream = null;
+    }
+    setStreamInfo("reconnecting (polling)");
+    startFallbackPolling();
+    scheduleReconnect();
+  };
+}
+
+async function bootstrap() {
+  await refreshViaHttp();
+  connectStream();
+}
+
+void bootstrap();

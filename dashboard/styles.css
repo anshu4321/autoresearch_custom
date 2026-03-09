@@ -127,6 +127,10 @@ h2 {
   text-align: right;
 }
 
+#streamInfo {
+  color: #8fd9ff;
+}
+
 .pill {
   display: inline-flex;
   align-items: center;
@@ -261,6 +265,34 @@ h2 {
 .live-panel {
   display: flex;
   flex-direction: column;
+}
+
+.progress-wrap {
+  margin-bottom: 10px;
+}
+
+.progress-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 7px;
+}
+
+.progress-track {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(95, 150, 176, 0.24);
+  border: 1px solid rgba(95, 177, 214, 0.28);
+  overflow: hidden;
+}
+
+.progress-fill {
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #35e88f, #38d5ff);
+  box-shadow: 0 0 14px rgba(56, 213, 255, 0.35);
 }
 
 .live-grid {

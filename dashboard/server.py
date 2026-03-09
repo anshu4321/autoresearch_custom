@@ -198,8 +198,67 @@ class DashboardHandler(SimpleHTTPRequestHandler):
     def app_config(self) -> ServerConfig:
         return self.server.app_config  # type: ignore[attr-defined]
 
+    def _serve_snapshot_stream(self) -> None:
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Connection", "keep-alive")
+        self.send_header("X-Accel-Buffering", "no")
+        self.end_headers()
+
+        last_snapshot_payload = ""
+        last_live_payload = ""
+        last_results_mtime = -1.0
+        last_full_emit = 0.0
+
+        def _results_mtime() -> float:
+            if self.app_config.results_path.exists():
+                return self.app_config.results_path.stat().st_mtime
+            return -1.0
+
+        while True:
+            now = time.time()
+            current_results_mtime = _results_mtime()
+            should_emit_full = (
+                not last_snapshot_payload
+                or current_results_mtime != last_results_mtime
+                or (now - last_full_emit) >= 15.0
+            )
+
+            if should_emit_full:
+                payload = _build_snapshot(self.app_config)
+                encoded = json.dumps(payload, separators=(",", ":"))
+                if encoded != last_snapshot_payload:
+                    chunk = f"event: snapshot\ndata: {encoded}\n\n".encode("utf-8")
+                    self.wfile.write(chunk)
+                    last_snapshot_payload = encoded
+                last_results_mtime = current_results_mtime
+                last_full_emit = now
+            else:
+                live_payload = {
+                    "generated_at": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
+                    "live": _read_log_state(self.app_config.run_log_path),
+                }
+                live_encoded = json.dumps(live_payload, separators=(",", ":"))
+                if live_encoded != last_live_payload:
+                    chunk = f"event: live\ndata: {live_encoded}\n\n".encode("utf-8")
+                    self.wfile.write(chunk)
+                    last_live_payload = live_encoded
+                else:
+                    self.wfile.write(b": heartbeat\n\n")
+
+            self.wfile.flush()
+            time.sleep(1.0)
+
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
+
+        if parsed.path == "/api/stream":
+            try:
+                self._serve_snapshot_stream()
+            except (BrokenPipeError, ConnectionResetError, OSError):
+                pass
+            return
 
         if parsed.path == "/api/snapshot":
             payload = _build_snapshot(self.app_config)
