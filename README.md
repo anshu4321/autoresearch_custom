@@ -63,6 +63,12 @@ python3 dashboard/server.py --repo-root . --port 8787
 
 Open `http://127.0.0.1:8787` to monitor run history + live progress from `run_retrieval.log`.
 
+Autonomous retrieval loop (7 hours default):
+
+```bash
+python3 run_autonomous_retrieval.py --repo . --hours 7
+```
+
 ## Running the agent
 
 Simply spin up your Claude/Codex or whatever you want in this repo (and disable all permissions), then you can prompt something like:
