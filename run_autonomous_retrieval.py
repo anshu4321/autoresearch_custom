@@ -7,6 +7,7 @@ import argparse
 import csv
 import random
 import re
+import shutil
 import subprocess
 import time
 from dataclasses import dataclass
@@ -167,6 +168,10 @@ def main() -> None:
     rng = random.Random(args.seed)
     start = time.time()
     deadline = start + args.hours * 3600
+    uv_bin = shutil.which("uv") or str(Path.home() / ".local" / "bin" / "uv")
+
+    if not Path(uv_bin).exists():
+        raise SystemExit(f"Could not locate uv executable. Checked: {uv_bin}")
 
     run_idx = 0
     keep_count = 0
@@ -190,7 +195,7 @@ def main() -> None:
         log_line(f"[run {run_idx:03d}] start | base={head_before} | {desc}")
         with run_log_path.open("w", encoding="utf-8") as log_f:
             proc = subprocess.run(
-                ["timeout", "900", "uv", "run", "train_retrieval.py"],
+                ["timeout", "900", uv_bin, "run", "train_retrieval.py"],
                 cwd=str(repo),
                 stdout=log_f,
                 stderr=subprocess.STDOUT,
