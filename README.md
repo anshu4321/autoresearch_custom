@@ -37,6 +37,24 @@ uv run train.py
 
 If the above commands all work ok, your setup is working and you can go into autonomous research mode.
 
+## Retrieval mode (BEIR SciFact)
+
+In addition to the original nanoGPT-style setup, this repo now includes a retrieval-focused autoresearch path:
+
+- **`prepare_retrieval.py`** — fixed prep + fixed eval harness for dense retrieval on SciFact.
+- **`train_retrieval.py`** — editable dual-encoder training loop with the same fixed 5-minute budget.
+- **`program_retrieval.md`** — baseline autonomous loop instructions for retrieval experiments.
+
+Metric: **`val_ndcg_at_10`** (higher is better), with `val_recall_at_10` reported as secondary.
+
+```bash
+# One-time prep for retrieval experiments
+uv run prepare_retrieval.py
+
+# Run one 5-minute retrieval experiment
+uv run train_retrieval.py
+```
+
 ## Running the agent
 
 Simply spin up your Claude/Codex or whatever you want in this repo (and disable all permissions), then you can prompt something like:
@@ -53,12 +71,15 @@ The `program.md` file is essentially a super lightweight "skill".
 prepare.py      — constants, data prep + runtime utilities (do not modify)
 train.py        — model, optimizer, training loop (agent modifies this)
 program.md      — agent instructions
+prepare_retrieval.py  — retrieval data prep + fixed eval (do not modify)
+train_retrieval.py    — retrieval training loop (agent modifies this)
+program_retrieval.md  — retrieval agent instructions
 pyproject.toml  — dependencies
 ```
 
 ## Design choices
 
-- **Single file to modify.** The agent only touches `train.py`. This keeps the scope manageable and diffs reviewable.
+- **Single file to modify per mode.** For LLM mode, touch `train.py`; for retrieval mode, touch `train_retrieval.py`. This keeps scope manageable and diffs reviewable.
 - **Fixed time budget.** Training always runs for exactly 5 minutes, regardless of your specific platform. This means you can expect approx 12 experiments/hour and approx 100 experiments while you sleep. There are two upsides of this design decision. First, this makes experiments directly comparable regardless of what the agent changes (model size, batch size, architecture, etc). Second, this means that autoresearch will find the most optimal model for your platform in that time budget. The downside is that your runs (and results) become not comparable to other people running on other compute platforms.
 - **Self-contained.** No external dependencies beyond PyTorch and a few small packages. No distributed training, no complex configs. One GPU, one file, one metric.
 
