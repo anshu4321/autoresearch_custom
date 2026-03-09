@@ -79,6 +79,10 @@ def append_result(path: Path, outcome: RunOutcome) -> None:
         )
 
 
+def log_line(message: str) -> None:
+    print(message, flush=True)
+
+
 def parse_metrics(run_log_path: Path) -> tuple[float | None, float | None]:
     text = run_log_path.read_text(encoding="utf-8", errors="replace") if run_log_path.exists() else ""
 
@@ -167,9 +171,9 @@ def main() -> None:
     run_idx = 0
     keep_count = 0
 
-    print(f"[loop] repo={repo}")
-    print(f"[loop] starting best nDCG@10={best_ndcg:.6f}" if best_ndcg > -1e8 else "[loop] no prior best")
-    print(f"[loop] deadline in {args.hours:.2f}h")
+    log_line(f"[loop] repo={repo}")
+    log_line(f"[loop] starting best nDCG@10={best_ndcg:.6f}" if best_ndcg > -1e8 else "[loop] no prior best")
+    log_line(f"[loop] deadline in {args.hours:.2f}h")
 
     while time.time() < deadline:
         if args.max_runs > 0 and run_idx >= args.max_runs:
@@ -183,7 +187,7 @@ def main() -> None:
         apply_mutation(train_path, key, new_val)
         desc = f"{key} {old_val} -> {new_val}"
 
-        print(f"[run {run_idx:03d}] start | base={head_before} | {desc}")
+        log_line(f"[run {run_idx:03d}] start | base={head_before} | {desc}")
         with run_log_path.open("w", encoding="utf-8") as log_f:
             proc = subprocess.run(
                 ["timeout", "900", "uv", "run", "train_retrieval.py"],
@@ -206,7 +210,7 @@ def main() -> None:
                 commit=f"wip{run_idx:04d}",
             )
             append_result(results_path, outcome)
-            print(f"[run {run_idx:03d}] crash | {desc} | {fail_hint}")
+            log_line(f"[run {run_idx:03d}] crash | {desc} | {fail_hint}")
             time.sleep(1.0)
             continue
 
@@ -228,7 +232,7 @@ def main() -> None:
                 commit=commit,
             )
             append_result(results_path, outcome)
-            print(f"[run {run_idx:03d}] keep    | ndcg={ndcg:.6f} | vram={peak_vram/1024:.1f} GB | commit={commit}")
+            log_line(f"[run {run_idx:03d}] keep    | ndcg={ndcg:.6f} | vram={peak_vram/1024:.1f} GB | commit={commit}")
         else:
             train_path.write_text(current_text, encoding="utf-8")
             outcome = RunOutcome(
@@ -239,13 +243,13 @@ def main() -> None:
                 commit=f"wip{run_idx:04d}",
             )
             append_result(results_path, outcome)
-            print(
+            log_line(
                 f"[run {run_idx:03d}] discard | ndcg={ndcg:.6f} (best={best_ndcg:.6f}) "
                 f"| vram={peak_vram/1024:.1f} GB"
             )
 
     elapsed_h = (time.time() - start) / 3600.0
-    print(f"[loop] finished runs={run_idx} keeps={keep_count} elapsed={elapsed_h:.2f}h best={best_ndcg:.6f}")
+    log_line(f"[loop] finished runs={run_idx} keeps={keep_count} elapsed={elapsed_h:.2f}h best={best_ndcg:.6f}")
 
 
 if __name__ == "__main__":
